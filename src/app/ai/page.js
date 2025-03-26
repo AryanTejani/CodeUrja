@@ -33,6 +33,7 @@ import {
   Book,
   BookOpen,
 } from "lucide-react";
+import Navbar from "../Navbar/components/Navbar";
 // Emergency keywords for safety detection
 const EMERGENCY_KEYWORDS = [
   "suicide",
@@ -1128,6 +1129,7 @@ Format responses with relevant information about the document or answer the user
 
     return (
       <div className="absolute top-0 left-0 w-80 h-full bg-gray-900 border-r border-gray-800 z-10 shadow-lg overflow-y-auto">
+        <Navbar />
         <div className="p-4 border-b border-gray-800">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-white">
@@ -1281,10 +1283,13 @@ Format responses with relevant information about the document or answer the user
     const timestamp = message.timestamp
       ? new Date(message.timestamp)
       : new Date();
-    const formattedTime = timestamp.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const formattedTime = `${timestamp
+      .getHours()
+      .toString()
+      .padStart(2, "0")}:${timestamp
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")} ${timestamp.getHours() >= 12 ? "PM" : "AM"}`;
 
     return (
       <div
@@ -1392,7 +1397,7 @@ Format responses with relevant information about the document or answer the user
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  "Get Files"
+                  "Get"
                 )}
               </button>
             </div>

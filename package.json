@@ -19,6 +19,7 @@
     "formidable": "^3.5.2",
     "fs": "^0.0.1-security",
     "googleapis": "^128.0.0",
+    "gsap": "^3.12.7",
     "hybrid-crypto-js": "^0.2.4",
     "iron-session": "^6.3.1",
     "js-file-download": "^0.4.12",
