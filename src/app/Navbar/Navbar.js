@@ -6,7 +6,6 @@ import logo from "../../../public/logo.png";
 
 const Navbar = () => {
   const { data: session, status } = useSession();
-
   return (
     <nav className="bg-gray-900 border-b border-gray-800 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

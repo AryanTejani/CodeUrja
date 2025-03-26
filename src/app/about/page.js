@@ -1,6 +1,6 @@
 import React from 'react';
 import './About.css';
-import collegeLogo from "../../../public/assests/IIITP_logo.jpg";
+import collegeLogo from "../../../public/logoch.webp";
 import Navbar from '../Navbar/Navbar';
 import Image from 'next/image';
 
@@ -15,7 +15,7 @@ function about() {
     <Navbar></Navbar>
     <div className="about-container">
       <div className="college-info">
-        <Image src={collegeLogo} alt="College Logo" className="college-logo" />
+        <Image src={collegeLogo} alt="College Logo" className="college-logo items-center justify-center" />
         <h1>Charotar University of Science and Technology Anand</h1>
       </div>
       <div className="developers-section">

@@ -114,7 +114,8 @@ export default function file(props) {
 
     setIsLoading(true);
     try {
-      const downloadFile = await axios.post("/api/file/download", {
+      console.log("Requesting file download with password...");
+      const response = await axios.post("/api/file/download", {
         name: props.params.file,
         fileid: selectedFileId,
         email: session.data.user.email,
@@ -125,60 +126,113 @@ export default function file(props) {
       setFilePassword("");
       setShowPasswordModal(false);
 
+      console.log("Download response received:", response.status);
+
+      if (!response.data || !response.data.data) {
+        throw new Error("Invalid response format");
+      }
+
+      const downloadData = response.data;
       console.log(
-        "Download response received, content type:",
-        downloadFile.data.headers["Content-Type"]
+        "File info:",
+        downloadData.headers.Name,
+        downloadData.headers["Content-Type"],
+        downloadData.data.isBase64 ? "Base64 encoded" : "Raw data",
+        "Size:",
+        downloadData.data.fileSize || "unknown"
+      );
+
+      // Debug response structure
+      console.log(
+        "Response structure:",
+        JSON.stringify({
+          hasData: !!downloadData,
+          dataProps: downloadData ? Object.keys(downloadData) : [],
+          hasHeaders: !!downloadData.headers,
+          headerProps: downloadData.headers
+            ? Object.keys(downloadData.headers)
+            : [],
+          contentType: downloadData.headers
+            ? downloadData.headers["Content-Type"]
+            : null,
+          fileName: downloadData.headers ? downloadData.headers.Name : null,
+          dataFileLength:
+            downloadData.data && downloadData.data.datafile
+              ? downloadData.data.datafile.length
+              : 0,
+        })
       );
 
       // All files are treated as binary/base64
-      if (downloadFile.data.data.isBase64) {
+      if (downloadData.data.isBase64) {
         try {
-          // Convert base64 to binary
-          const byteCharacters = atob(downloadFile.data.data.datafile);
-          const byteNumbers = new Array(byteCharacters.length);
+          // Create a blob from the base64 data
+          const binaryString = atob(downloadData.data.datafile);
+          const bytes = new Uint8Array(binaryString.length);
 
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
           }
 
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], {
-            type: downloadFile.data.headers["Content-Type"],
+          // Create blob with the correct MIME type
+          const blob = new Blob([bytes], {
+            type:
+              downloadData.headers["Content-Type"] ||
+              "application/octet-stream",
           });
 
-          // Create download link
+          // Create and trigger download link
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
-          link.download = downloadFile.data.headers.Name;
+          link.download = downloadData.headers.Name || "downloaded-file";
           document.body.appendChild(link);
-          link.click();
 
-          // Clean up
+          console.log("Download link created, initiating download...");
+
+          // Add a small delay before clicking to ensure the link is ready
           setTimeout(() => {
-            URL.revokeObjectURL(url);
-            document.body.removeChild(link);
-          }, 100);
+            link.click();
 
-          console.log("File download initiated");
+            // Clean up
+            setTimeout(() => {
+              URL.revokeObjectURL(url);
+              document.body.removeChild(link);
+              console.log("Download complete and resources cleaned up");
+            }, 100);
+          }, 100);
         } catch (error) {
           console.error("Error processing binary file:", error);
-          alert("Error processing the file. Please try again.");
+          alert(`Error processing the file: ${error.message}`);
         }
       } else {
-        // Plain text fallback (shouldn't be used with current implementation)
+        // Fallback for non-base64 data (shouldn't happen with current implementation)
+        console.log("Using fallback download method");
         fileDownload(
-          downloadFile.data.data.datafile,
-          downloadFile.data.headers.Name
+          downloadData.data.datafile,
+          downloadData.headers.Name || "downloaded-file"
         );
       }
     } catch (error) {
       console.error("Download error:", error);
-      if (error.response && error.response.status === 401) {
-        setPasswordError(error.response.data.error || "Incorrect password");
-      } else {
-        setPasswordError("Error downloading file. Please try again.");
+
+      // Show detailed error information for debugging
+      let errorMessage = "Error downloading file. Please try again.";
+
+      if (error.response) {
+        console.error("Response error data:", error.response.data);
+        console.error("Response status:", error.response.status);
+
+        if (error.response.status === 401) {
+          errorMessage = error.response.data.error || "Incorrect password";
+        } else if (error.response.data && error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+
+      setPasswordError(errorMessage);
     } finally {
       setIsLoading(false);
     }
