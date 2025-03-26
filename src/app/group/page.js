@@ -25,10 +25,6 @@ export default function Group() {
   };
 
   async function send() {
-    if (!session.data || !session.data.user) {
-      console.error("Session not available.");
-      return;
-    }
     console.log("groupname ", grpname);
     const res = axios.post("/api/group/create", {
       name: grpname,
@@ -64,61 +60,13 @@ export default function Group() {
     console.log(res.data);
   }
   async function adduser(i) {
-    try {
-      // Check if session exists
-      if (!session.data || !session.data.user) {
-        console.error("Session not available");
-        return;
-      }
-
-      // Validate email
-      if (!emails || emails.trim() === "") {
-        alert("Please enter a valid email address");
-        return;
-      }
-
-      // Show loading state (optional)
-      // setIsLoading(true);
-
-      const res = await axios.post("/api/group/adduser", {
-        name: i,
-        email: emails,
-        owner: session.data.user.email,
-      });
-
-      // Handle successful response
-      console.log("User added successfully:", res.data);
-
-      // Optionally refresh the user list
-      showusers(i);
-
-      // Clear the email input
-      setEmail("");
-
-      // Show success message
-      alert("User added successfully!");
-    } catch (error) {
-      // Handle errors
-      console.error("Error adding user:", error);
-
-      // Show more detailed error information
-      if (error.response) {
-        // The server responded with an error status
-        console.error("Server error details:", error.response.data);
-        alert(`Error: ${error.response.data.message || "Failed to add user"}`);
-      } else if (error.request) {
-        // The request was made but no response was received
-        alert("Server did not respond. Please try again later.");
-      } else {
-        // Something else caused the error
-        alert(`Error: ${error.message}`);
-      }
-    } finally {
-      // Reset loading state if you added one
-      // setIsLoading(false);
-    }
+    if (emails === null) return false;
+    const res = await axios.post("/api/group/adduser", {
+      name: i,
+      email: emails,
+      owner: session.data.user.email,
+    });
   }
-
   async function showfiles(i) {
     const res = await axios.post("/api/file/show", {
       name: i,
