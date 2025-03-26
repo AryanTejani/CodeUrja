@@ -13,7 +13,7 @@ import Approach from "./approach/page.js";
 import Group from "./group/page.js"
 import File from "./[file]/page.js"
 import Download from "./download/page.js"
-
+// import "./global.css"
 
 export default function Home() {
    

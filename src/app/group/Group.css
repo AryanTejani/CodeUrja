@@ -1,93 +1,67 @@
-.group-container {
+.group-list-header {
   display: flex;
-  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
   align-items: center;
-  justify-content: center;
-  height: 100vh; /* Adjust the height to center vertically */
 }
 
-/* Rest of your existing styles */
-.group-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.group-creation-message {
-  font-size: 24px;
-  color: #333;
-  font-weight: bold;
-}
-
-.group-name-input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
-}
-
-.create-group-button {
-  background-color: #007bff;
-  color: #fff;
+.refresh-button {
+  background: none;
   border: none;
-  border-radius: 5px;
-  padding: 10px 20px;
+  font-size: 20px;
   cursor: pointer;
-  font-size: 18px;
-  transition: background-color 0.2s;
-}
-
-.create-group-button:hover {
-  background-color: #0056b3;
-}
-
-.group-list {
-  text-align: center;
-}
-
-.group-list button {
-  background-color: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
   padding: 5px 10px;
-  margin: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s;
 }
 
-.group-list button:hover {
-  background-color: #1e7e34;
+.refresh-button:hover {
+  background-color: #f0f0f0;
+  border-radius: 4px;
 }
 
-.group-list-items {
-  list-style: none;
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading-text {
+  color: #666;
+  font-style: italic;
+  margin: 10px 0;
+}
+
+.group-actions-row {
   display: flex;
-  flex-direction: column;
-  padding: 0;
-}
-
-.group-list-items li {
-  display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
-  padding: 15px 0;
-  border-top: 1px solid #ccc;
+  margin-top: 10px;
 }
 
-.go-to-group-button {
-  background-color: #007bff;
-  color: #fff;
+.delete-button {
+  background-color: #f44336;
+  color: white;
   border: none;
-  border-radius: 5px;
   padding: 5px 10px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s;
 }
 
-.go-to-group-button:hover {
-  background-color: #0056b3;
+.delete-button:hover {
+  background-color: #d32f2f;
+}
+
+.delete-button:disabled {
+  background-color: #ffcdd2;
+  cursor: not-allowed;
+}
+
+.add-user-form {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

@@ -11,15 +11,18 @@ const rsa = new RSA();
 
 export const POST = async (req) => {
   const request = await req.json();
-  console.log(request);
+  console.log("Received request:", request);
+
   try {
     await connect();
     const grpexist = await Group.exists({ name: request.name });
     if (grpexist) {
       throw new Error("grp exists");
     }
+
     const user = await User.findOne({ email: request.email });
-    console.log(user);
+    console.log("User:", user.email);
+
     const folder = await axios.post(
       `https:www.googleapis.com/drive/v3/files?access_token=${user.access_token}`,
       {
@@ -36,33 +39,58 @@ export const POST = async (req) => {
       }
     );
 
-    rsa.generateKeyPair(async function (keyPair) {
-      // console.log("public key ",mpk);
+    console.log("Folder created:", folder.data.id);
+    console.log("Password to be used:", request.filePassword);
 
-      const grppublickey = keyPair.publicKey.toString();
-      const decrptuserPrivatekey = aes
-        .decrypt(user.encryptedprivatekey, process.env.NEXTAUTH_SECRET)
-        .toString(Latin1);
-      const grpprivatekey = aes
-        .encrypt(keyPair.privateKey, decrptuserPrivatekey)
-        .toString();
-
-      const newGrpr = await Group.create({
-        name: request.name,
-        folderId: folder.data.id,
-        publickey: grppublickey,
-        privatekey: grpprivatekey,
-        userEmails: user.email,
-        ownerId: user.id,
+    // Convert the callback-based RSA key generation to a Promise
+    const generateKeyPairAsync = () => {
+      return new Promise((resolve) => {
+        rsa.generateKeyPair(function (keyPair) {
+          resolve(keyPair);
+        });
       });
-      await User.findOneAndUpdate(
-        { email: user.email },
-        { $push: { groupprikeys: { id: newGrpr.name, key: grpprivatekey } } }
-      );
+    };
+
+    // Wait for key generation
+    const keyPair = await generateKeyPairAsync();
+
+    const grppublickey = keyPair.publicKey.toString();
+    const decrptuserPrivatekey = aes
+      .decrypt(user.encryptedprivatekey, process.env.NEXTAUTH_SECRET)
+      .toString(Latin1);
+    const grpprivatekey = aes
+      .encrypt(keyPair.privateKey, decrptuserPrivatekey)
+      .toString();
+
+    // Create the group with all required fields
+    const newGrpr = await Group.create({
+      name: request.name,
+      folderId: folder.data.id,
+      publickey: grppublickey,
+      privatekey: grpprivatekey,
+      userEmails: [user.email],
+      ownerId: user.id,
+      filePassword: request.filePassword || "default123", // Ensure a default if missing
+    });
+
+    console.log("Group created with password:", newGrpr.filePassword);
+
+    // Update user with group key
+    await User.findOneAndUpdate(
+      { email: user.email },
+      { $push: { groupprikeys: { id: newGrpr.name, key: grpprivatekey } } }
+    );
+
+    return Response.json({
+      success: true,
+      message: "Group created successfully",
+      name: newGrpr.name,
     });
   } catch (e) {
-    console.log(e);
-    return Response.json("err", { status: 500 });
+    console.error("Error creating group:", e);
+    return Response.json(
+      { error: e.message || "Error creating group" },
+      { status: 500 }
+    );
   }
-  return Response.json("ok");
 };
