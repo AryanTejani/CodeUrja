@@ -7,6 +7,13 @@ import FormData from "form-data";
 import Navbar from "../Navbar/Navbar";
 import "./File.css";
 import fileDownload from "js-file-download";
+import dynamic from "next/dynamic";
+
+// Dynamically import the AI component with no SSR to avoid hydration issues
+const AiChat = dynamic(() => import("../ai/page"), {
+  ssr: false,
+  loading: () => <div className="ai-loading">Loading AI assistant...</div>,
+});
 
 export const config = {
   api: {
@@ -27,6 +34,8 @@ export default function file(props) {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+  const [showAiChat, setShowAiChat] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // Load files when component mounts
   useEffect(() => {
@@ -99,11 +108,13 @@ export default function file(props) {
     }
   }
 
-  const initiateDownload = (fileId) => {
+  const initiateDownload = (fileId, fileName) => {
     setSelectedFileId(fileId);
     setShowPasswordModal(true);
     setPasswordError("");
     setFilePassword("");
+    // Store the selected file info for AI
+    setSelectedFile(fileName);
   };
 
   const handlePasswordSubmit = async () => {
@@ -201,6 +212,9 @@ export default function file(props) {
               console.log("Download complete and resources cleaned up");
             }, 100);
           }, 100);
+
+          // Show AI chat after successful download
+          setShowAiChat(true);
         } catch (error) {
           console.error("Error processing binary file:", error);
           alert(`Error processing the file: ${error.message}`);
@@ -212,6 +226,9 @@ export default function file(props) {
           downloadData.data.datafile,
           downloadData.headers.Name || "downloaded-file"
         );
+
+        // Show AI chat after successful download
+        setShowAiChat(true);
       }
     } catch (error) {
       console.error("Download error:", error);
@@ -309,96 +326,144 @@ export default function file(props) {
     return (
       <div>
         <Navbar></Navbar>
-        <div className="file-container">
-          <h1 className="file-heading">Group File Upload</h1>
-          <p className="file-message">
-            Upload and securely share files within this group.
-          </p>
+        <div className="main-container">
+          <div className={`file-container ${showAiChat ? "with-ai" : ""}`}>
+            <h1 className="file-heading">Group File Upload</h1>
+            <p className="file-message">
+              Upload and securely share files within this group.
+            </p>
 
-          <div className="file-actions">
-            <div className="file-input-container">
-              <label htmlFor="myfile" className="file-input-label">
-                {file ? file.name : "Select File"}
-              </label>
-              <input
-                type="file"
-                id="myfile"
-                ref={fileInputRef}
-                onChange={handlefile}
-                disabled={isLoading}
-                className="file-input"
-              />
-              {file && (
-                <span className="file-size">
-                  {(file.size / 1024).toFixed(2)} KB
-                </span>
-              )}
-            </div>
+            <div className="file-actions">
+              <div className="file-input-container">
+                <label htmlFor="myfile" className="file-input-label">
+                  {file ? file.name : "Select File"}
+                </label>
+                <input
+                  type="file"
+                  id="myfile"
+                  ref={fileInputRef}
+                  onChange={handlefile}
+                  disabled={isLoading}
+                  className="file-input"
+                />
+                {file && (
+                  <span className="file-size">
+                    {(file.size / 1024).toFixed(2)} KB
+                  </span>
+                )}
+              </div>
 
-            <button
-              className="upload-button"
-              onClick={() => upload()}
-              disabled={!file || isLoading}
-            >
-              {isLoading ? `Uploading... ${uploadProgress}%` : "Upload"}
-            </button>
-          </div>
-
-          {uploadProgress > 0 && uploadProgress < 100 && (
-            <div className="progress-bar-container">
-              <div
-                className="progress-bar"
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
-            </div>
-          )}
-
-          <div className="file-list-container">
-            <div className="file-list-header">
-              <h2 className="file-list-title">Files in this Group</h2>
               <button
-                className="refresh-button"
-                onClick={() => getfiles()}
-                disabled={isLoading}
-                title="Refresh file list"
+                className="upload-button"
+                onClick={() => upload()}
+                disabled={!file || isLoading}
               >
-                🔄
+                {isLoading ? `Uploading... ${uploadProgress}%` : "Upload"}
               </button>
             </div>
 
-            {isLoading && <div className="loading-spinner"></div>}
-
-            {Array.isArray(files) && files.length > 0 ? (
-              <ul className="file-list-items">
-                {files.map((file, i) => (
-                  <li key={i} className="file-item">
-                    <div className="file-item-info">
-                      <span className="file-icon">
-                        {getFileIcon(file.name)}
-                      </span>
-                      <span className="file-name">{file.name}</span>
-                    </div>
-                    <button
-                      className="download-button"
-                      onClick={() => initiateDownload(file.id)}
-                      disabled={isLoading}
-                    >
-                      Download
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              !isLoading && (
-                <div className="empty-state">
-                  <p className="no-files-message">
-                    No files found in this group.
-                  </p>
-                  <p className="upload-prompt">Upload a file to get started.</p>
-                </div>
-              )
+            {uploadProgress > 0 && uploadProgress < 100 && (
+              <div className="progress-bar-container">
+                <div
+                  className="progress-bar"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
             )}
+
+            <div className="file-list-container">
+              <div className="file-list-header">
+                <h2 className="file-list-title">Files in this Group</h2>
+                <div className="file-list-actions">
+                  <button
+                    className="ai-toggle-button"
+                    onClick={() => setShowAiChat(!showAiChat)}
+                    title={
+                      showAiChat ? "Hide AI Assistant" : "Show AI Assistant"
+                    }
+                  >
+                    {showAiChat ? "Hide AI" : "Show AI"}
+                  </button>
+                  <button
+                    className="refresh-button"
+                    onClick={() => getfiles()}
+                    disabled={isLoading}
+                    title="Refresh file list"
+                  >
+                    🔄
+                  </button>
+                </div>
+              </div>
+
+              {isLoading && <div className="loading-spinner"></div>}
+
+              {Array.isArray(files) && files.length > 0 ? (
+                <ul className="file-list-items">
+                  {files.map((file, i) => (
+                    <li key={i} className="file-item">
+                      <div className="file-item-info">
+                        <span className="file-icon">
+                          {getFileIcon(file.name)}
+                        </span>
+                        <span className="file-name">{file.name}</span>
+                      </div>
+                      <div className="file-item-actions">
+                        <button
+                          className="ai-analyze-button"
+                          onClick={() => {
+                            setSelectedFile(file.name);
+                            setShowAiChat(true);
+                          }}
+                          title="Analyze with AI"
+                        >
+                          AI
+                        </button>
+                        <button
+                          className="download-button"
+                          onClick={() => initiateDownload(file.id, file.name)}
+                          disabled={isLoading}
+                        >
+                          Download
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                !isLoading && (
+                  <div className="empty-state">
+                    <p className="no-files-message">
+                      No files found in this group.
+                    </p>
+                    <p className="upload-prompt">
+                      Upload a file to get started.
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
           </div>
+
+          {/* AI Chat Component */}
+          {showAiChat && (
+            <div className="ai-chat-container">
+              <div className="ai-chat-header">
+                <h2>AI Assistant</h2>
+                <button
+                  className="close-ai-button"
+                  onClick={() => setShowAiChat(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="ai-chat-content">
+                <AiChat
+                  currentFile={selectedFile}
+                  groupName={props.params.file}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Password Modal */}
