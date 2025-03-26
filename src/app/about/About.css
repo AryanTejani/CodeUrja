@@ -1,0 +1,57 @@
+/* About Page Styles */
+.about-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: white;
+    background-color: #101522; /* Set your preferred background color */
+    min-height: 100vh; /* Adjust as needed for your design */
+  }
+  
+  .college-info {
+    text-align: center;
+  }
+  
+  .college-logo {
+    width: 200px; /* Set your logo size */
+    height: auto;
+    margin-bottom: 10px;
+    border: double 6px whitesmoke;
+  }
+  
+  .developers-section {
+   
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .developer-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .developer {
+     color: black;
+     font-weight: bold;
+     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    background-color: #fff; /* Set your developer section background color */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .developer h3 {
+    color: #424e6b;
+    font-size: 20px;
+    margin: 0;
+  }
+  
+  .developer p {
+    font-size: 16px;
+    margin: 0;
+  }
+  

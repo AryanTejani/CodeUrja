@@ -1,0 +1,54 @@
+/* Home Page Styles */
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh; /* Adjust as needed for your design */
+  background-color: #101522; /* Set your preferred background color */
+}
+
+.welcome-message {
+  font-size: 36px;
+  color: #ecf0f1; /* Set your preferred text color */
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.logo {
+  width: 400px; /* Set your logo size */
+  height: auto;
+  border: solid 1px whitesmoke;
+  margin-bottom: 20px;
+}
+
+.subtitle {
+  font-size: 24px;
+  color: #ecf0f1; /* Set your preferred text color */
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.button-container {
+  display: flex;
+}
+
+.login-button,
+.signup-button,
+.about-button {
+  background-color: #3498db; /* Set your button color */
+  color: #ecf0f1; /* Set your button text color */
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  margin: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color 0.3s;
+}
+
+.login-button:hover,
+.signup-button:hover,
+.about-button:hover {
+  background-color: #2980b9; /* Set your button hover color */
+}
