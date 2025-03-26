@@ -1,5 +1,6 @@
 "use client";
-
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.entry";
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
@@ -123,6 +124,12 @@ export default function Download() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [passwordError, setPasswordError] = useState("");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+      window.pdfjsLib = pdfjsLib;
+    }
+  }, []);
 
   // PDF viewer states
   const [currentPdf, setCurrentPdf] = useState(null);
@@ -432,58 +439,75 @@ export default function Download() {
     }
   };
 
-  // It should be at the same level as your other functions like extractTextFromPdf
-  const handleTextUpload = (e) => {
+  const handleTextUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check if it's a text file
-    if (
-      file.type !== "text/plain" &&
-      file.type !== "application/octet-stream" &&
-      !file.name.endsWith(".txt")
-    ) {
-      // Use the existing error state setter
-      setError("Please upload a text (.txt) file containing the PDF content");
+    // Check if it's a PDF file
+    if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
+      setError("Please upload a PDF file");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target.result;
-        if (text && text.length > 0) {
-          // Use the existing PDF text state setter
-          setPdfText(text);
+    setIsLoading(true);
+    setError(null);
 
-          // Update the AI with context about the manual text upload
-          const aiMessage = {
-            text: `I've received the text content for "${
-              currentPdf?.name || "your document"
-            }". You can now ask me questions about its content.`,
-            sender: "ai",
-            timestamp: Date.now(),
-          };
+    try {
+      // Create a URL for the file
+      const fileURL = URL.createObjectURL(file);
 
-          setMessages((prev) => [...prev, aiMessage]);
+      // Load the PDF document using the imported pdfjsLib
+      const loadingTask = pdfjsLib.getDocument(fileURL);
+      const pdf = await loadingTask.promise;
 
-          // Notify user of successful upload
-          setError(null);
-        } else {
-          setError("The uploaded file appears to be empty");
-        }
-      } catch (error) {
-        console.error("Error processing text file:", error);
-        setError("Failed to process the text file. Please try again.");
+      // Get total number of pages
+      const numPages = pdf.numPages;
+      let fullText = "";
+
+      // Extract text from each page
+      for (let i = 1; i <= numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item) => item.str).join(" ");
+        fullText += pageText + "\n\n";
       }
-    };
 
-    reader.onerror = () => {
-      setError("Error reading the file. Please try again.");
-    };
+      // Set the extracted text
+      setPdfText(fullText);
 
-    reader.readAsText(file);
+      // Update the current PDF info if not already set
+      if (!currentPdf) {
+        setCurrentPdf({
+          name: file.name,
+          type: file.type,
+          url: fileURL,
+          id: Date.now().toString(),
+        });
+      }
+
+      // Update the AI with context about the PDF upload
+      const aiMessage = {
+        text: `I've extracted the text content from "${file.name}". You can now ask me questions about its content.`,
+        sender: "ai",
+        timestamp: Date.now(),
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error processing PDF file:", error);
+      setError(
+        "Failed to extract text from the PDF. The file may be corrupted, password-protected, or contain only images."
+      );
+      setIsLoading(false);
+
+      // Revoke object URL if created
+      if (file.objectUrl) {
+        URL.revokeObjectURL(file.objectUrl);
+      }
+    }
   };
+
   // Extract text from PDF for AI analysis
   const extractTextFromPdf = async (pdfBlob) => {
     try {
@@ -1101,7 +1125,6 @@ Format responses with relevant information about the document or answer the user
     }, {});
 
     // Make sure this function is placed inside your main component function
-    
 
     return (
       <div className="absolute top-0 left-0 w-80 h-full bg-gray-900 border-r border-gray-800 z-10 shadow-lg overflow-y-auto">
@@ -1553,27 +1576,48 @@ Format responses with relevant information about the document or answer the user
               </div>
             )}
 
-            {/* Add this manual text upload option */}
-            {currentPdf && (
+            {/* Add manual PDF upload option */}
+            {currentPdf ? (
               <div className="mt-2 p-2 bg-purple-900/20 border border-purple-800/30 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-purple-300">
                     <Upload className="w-4 h-4" />
-                    <span>Manual text upload for better analysis</span>
+                    <span>Upload another PDF for analysis</span>
                   </div>
                   <label className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer">
                     <input
                       type="file"
-                      accept=".txt"
+                      accept=".pdf,application/pdf"
                       className="hidden"
-                      onChange={handleTextUpload}
+                      onChange={(e) => handleTextUpload(e)}
                     />
-                    <span>Upload text</span>
+                    <span>Upload PDF</span>
                   </label>
                 </div>
                 <p className="text-xs text-purple-400 mt-1">
-                  If automatic extraction fails, you can manually upload a text
-                  file containing the PDF content.
+                  If automatic extraction fails, you can manually upload a PDF
+                  file for text extraction.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-2 p-2 bg-purple-900/20 border border-purple-800/30 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-purple-300">
+                    <Upload className="w-4 h-4" />
+                    <span>Upload a PDF for analysis</span>
+                  </div>
+                  <label className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleTextUpload(e)}
+                    />
+                    <span>Upload PDF</span>
+                  </label>
+                </div>
+                <p className="text-xs text-purple-400 mt-1">
+                  Upload a PDF file to extract its text content for AI analysis.
                 </p>
               </div>
             )}
