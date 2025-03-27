@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
-import logo from "../../../../public/logo.png";
+import logo from "../../../../public/sh1.png";
 import { gsap } from "gsap";
 
 const Navbar = () => {
@@ -86,7 +86,7 @@ const Navbar = () => {
                 width={150}
                 height={50}
                 priority
-                className="transition-all duration-300 group-hover:brightness-110 group-hover:scale-105"
+                className="transition-all duration-300 group-hover:brightness-110 group-hover:scale-105 h-18 w-auto"
               />
             </a>
           </div>

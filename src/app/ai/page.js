@@ -240,17 +240,17 @@ export default function Download() {
 
   // Enhanced history function to store complete conversations
   const addToHistory = (newMessage) => {
-    // Create a conversation object if it's a user message
     if (newMessage.sender === "user") {
+      // Create a new conversation entry when user sends a message
       const conversationId = Date.now();
+
+      // Create a complete conversation object
       const conversationObj = {
         id: conversationId,
-        text: newMessage.text,
         timestamp: Date.now(),
-        messages: [
-          ...messages.slice(-3), // Include recent context
-          newMessage,
-        ],
+        userMessage: newMessage.text,
+        aiResponse: null, // Will be filled when AI responds
+        allMessages: [...messages, newMessage], // Store all current messages for context
         fileInfo: currentPdf
           ? {
               name: currentPdf.name,
@@ -260,29 +260,25 @@ export default function Download() {
           : null,
       };
 
-      // Update history with new conversation
+      // Add to history and set as active conversation
       const updatedHistory = [...fullHistory, conversationObj];
-      // Limit history to last 50 conversations
-      const limitedHistory = updatedHistory.slice(-50);
-      setFullHistory(limitedHistory);
-
-      // Store conversation ID for later association with AI response
+      setFullHistory(updatedHistory);
       setActiveConversation(conversationId);
 
-      // Persist to localStorage
+      // Save to localStorage
       localStorage.setItem(
         "fileAnalysisHistory",
-        JSON.stringify(limitedHistory)
+        JSON.stringify(updatedHistory)
       );
-    }
-    // If it's an AI response and we have an active conversation
-    else if (newMessage.sender === "ai" && activeConversation) {
-      // Find the conversation and update it with the AI response
+    } else if (newMessage.sender === "ai" && activeConversation) {
+      // Update the active conversation with AI's response
       const updatedHistory = fullHistory.map((conv) => {
         if (conv.id === activeConversation) {
+          // Update the conversation with AI response
           return {
             ...conv,
-            messages: [...conv.messages, newMessage],
+            aiResponse: newMessage.text,
+            allMessages: [...conv.allMessages, newMessage], // Add AI message to conversation
           };
         }
         return conv;
@@ -293,9 +289,7 @@ export default function Download() {
         "fileAnalysisHistory",
         JSON.stringify(updatedHistory)
       );
-
-      // Reset active conversation
-      setActiveConversation(null);
+      setActiveConversation(null); // Reset active conversation
     }
   };
 
@@ -920,36 +914,58 @@ Format responses with relevant information about the document or answer the user
 
   // Select a conversation from history
   const handleSelectConversation = (conversation) => {
-    // Load the conversation messages
-    if (conversation.messages && conversation.messages.length) {
-      setMessages(conversation.messages);
-    } else {
-      // Fallback if old format without nested messages
-      setMessages([
+    // If we have stored all messages, use them
+    if (conversation.allMessages && conversation.allMessages.length > 0) {
+      setMessages(conversation.allMessages);
+    }
+    // Fallback to recreating the conversation
+    else {
+      const reconstructedMessages = [
         {
           text: "👋 Previous conversation",
           sender: "ai",
-          timestamp: conversation.timestamp,
+          timestamp: conversation.timestamp - 1000,
         },
-        {
+      ];
+
+      // Add user message
+      if (conversation.userMessage) {
+        reconstructedMessages.push({
+          text: conversation.userMessage,
+          sender: "user",
+          timestamp: conversation.timestamp,
+        });
+      } else if (conversation.text) {
+        // Support for old format
+        reconstructedMessages.push({
           text: conversation.text,
           sender: "user",
           timestamp: conversation.timestamp,
-        },
-      ]);
+        });
+      }
+
+      // Add AI response if available
+      if (conversation.aiResponse) {
+        reconstructedMessages.push({
+          text: conversation.aiResponse,
+          sender: "ai",
+          timestamp: conversation.timestamp + 1000,
+        });
+      }
+
+      setMessages(reconstructedMessages);
     }
 
-    // If the conversation had a file associated with it, try to load that file
-    if (conversation.fileInfo && conversation.fileInfo.id) {
-      // This is just a reference - we'd need to download the file again
-      // In a real implementation, you might want to cache the file data
-      console.log("Would load file with ID:", conversation.fileInfo.id);
+    // If there was a file associated with this conversation
+    if (conversation.fileInfo) {
+      setCurrentPdf(conversation.fileInfo);
     }
 
-    // Close history panel
+    // Close the history panel
     setShowHistory(false);
   };
 
+ 
   const handleSendMessage = async (voiceInput = null) => {
     const cleanInput = sanitizeInput(voiceInput || input);
     if (!cleanInput) return;
@@ -1105,13 +1121,19 @@ Format responses with relevant information about the document or answer the user
   };
 
   // History Panel Component
+  // Updated History Panel Component with improved display
   const HistoryPanel = ({ history, onSelectConversation, onClose }) => {
     const [searchTerm, setSearchTerm] = useState("");
 
     // Filter history based on search term
-    const filteredHistory = history.filter((msg) =>
-      msg.text?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredHistory = history.filter((conv) => {
+      const userMsg = conv.userMessage || conv.text || "";
+      const aiResp = conv.aiResponse || "";
+      return (
+        userMsg.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        aiResp.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
 
     // Group conversations by date
     const groupedHistory = filteredHistory.reduce((groups, message) => {
@@ -1129,7 +1151,6 @@ Format responses with relevant information about the document or answer the user
 
     return (
       <div className="absolute top-0 left-0 w-80 h-full bg-gray-900 border-r border-gray-800 z-10 shadow-lg overflow-y-auto">
-        <Navbar />
         <div className="p-4 border-b border-gray-800">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-white">
@@ -1187,7 +1208,14 @@ Format responses with relevant information about the document or answer the user
                     {message.fileInfo && (
                       <FileText className="w-3 h-3 mr-2 text-blue-400" />
                     )}
-                    {message.text.substring(0, 60)}...
+                    <span className="flex-1 truncate">
+                      {message.text.substring(0, 60)}...
+                    </span>
+                    {message.responseText && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        Has response
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -1370,7 +1398,8 @@ Format responses with relevant information about the document or answer the user
         darkMode ? "dark-theme" : "light-theme"
       }`}
     >
-      <div className="flex flex-col md:flex-row gap-4">
+       <Navbar />
+      <div className="flex flex-col md:flex-row gap-4 mt-5">
         {/* File browser section */}
         <div className="w-full md:w-1/3 bg-gray-900 rounded-2xl shadow-md border border-gray-800 p-4">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
